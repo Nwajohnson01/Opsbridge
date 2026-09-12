@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+  CONTRACTOR
+}
+
+enum RequestStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  REJECTED
+  PAID
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+
+  requestsAsCustomer   Request[]      @relation("CustomerRequests")
+  requestsAsContractor Request[]      @relation("ContractorRequests")
+  notifications        Notification[]
+}
+
+model Request {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  amount      Float
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  customerId String
+  customer   User   @relation("CustomerRequests", fields: [customerId], references: [id])
+
+  contractorId String?
+  contractor   User?   @relation("ContractorRequests", fields: [contractorId], references: [id])
+
+  notifications Notification[]
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // "EMAIL" | "SMS" | "PAYMENT"
+  message   String
+  createdAt DateTime @default(now())
+
+  requestId String?
+  request   Request? @relation(fields: [requestId], references: [id])
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+}
